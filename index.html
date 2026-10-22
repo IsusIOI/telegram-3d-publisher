@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11131a">
+  <title>3D Krutilka — просмотрщик моделей</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080a10;--panel:rgba(17,20,30,.88);--line:rgba(255,255,255,.10);--text:#f5f7ff;--muted:#929bad;--blue:#8b7cff;--cyan:#64e4ff;--green:#6ef0c2}
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}body{display:flex;flex-direction:column;background:radial-gradient(ellipse at 50% -20%,#242747 0%,#0c0f18 45%,#07090e 100%)}
+    .topbar{height:68px;flex:none;display:flex;align-items:center;gap:12px;padding:0 22px;border-bottom:1px solid var(--line);background:rgba(8,10,16,.65);backdrop-filter:blur(22px);z-index:2}
+    .logo{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#a99cff,#6a5cff 55%,#54dff8);color:#090b12;font-weight:950;letter-spacing:-1px;box-shadow:0 5px 24px #8171ff55}.brand{font-size:15px;font-weight:850;letter-spacing:.3px}.brand small{display:block;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:1.6px;text-transform:uppercase}.top-status{margin-left:auto;display:flex;align-items:center;gap:8px;color:#b8c0d0;font-size:12px}.status-light{width:7px;height:7px;background:var(--green);border-radius:50%;box-shadow:0 0 12px #6ef0c2}
+    #stage{position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(ellipse at 50% 42%,#252b43 0%,#141827 34%,#0b0e16 70%,#080a10 100%)}#stage:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;background-image:linear-gradient(#929cc51a 1px,transparent 1px),linear-gradient(90deg,#929cc51a 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,transparent,#000 30%,#000 80%,transparent)}#stage:after{content:"";position:absolute;left:20%;right:20%;bottom:7%;height:18%;background:#8378ff;filter:blur(100px);opacity:.10;pointer-events:none}canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:none}
+    .file-pill{position:absolute;top:18px;left:20px;z-index:2;display:flex;align-items:center;gap:10px;max-width:calc(100% - 40px);padding:10px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(10,13,21,.68);backdrop-filter:blur(18px);box-shadow:0 12px 40px #0002;color:#e8ebf7}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px #6ef0c288;flex:none}#filename{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px;font-size:12px;font-weight:650}.file-label{display:block;color:var(--muted);font-size:9px;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:1px}
+    .welcome{position:absolute;z-index:2;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;pointer-events:none}.welcome .cube{width:84px;height:84px;border:1px solid #aaa0ff55;border-radius:26px;display:grid;place-items:center;font-size:45px;color:#b5adff;background:linear-gradient(145deg,#a59bff18,#6be8ff0a);box-shadow:0 0 70px #8171ff18;margin-bottom:24px}.welcome h1{font-size:clamp(23px,3vw,34px);line-height:1.12;letter-spacing:-1px;margin:0 0 12px;font-weight:850}.welcome p{max-width:350px;color:#a8b0c4;margin:0 0 22px;font-size:14px}.welcome button,.welcome .upload-label{pointer-events:auto}
+    .controls{position:relative;z-index:3;flex:none;display:flex;align-items:center;gap:9px;padding:13px 18px max(13px,env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(9,11,18,.88);backdrop-filter:blur(24px)}button,.upload-label{border:1px solid #ffffff16;background:linear-gradient(180deg,#252a3a,#191d29);color:#f5f6ff;border-radius:13px;min-height:44px;padding:0 15px;font:700 12px system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;transition:all .18s ease;box-shadow:0 3px 12px #0002}button:hover,.upload-label:hover{transform:translateY(-1px);border-color:#aaa0ff66;background:linear-gradient(180deg,#30364b,#202536)}button:active,.upload-label:active{transform:scale(.98)}button.primary,.upload-label.primary{background:linear-gradient(135deg,#a99cff,#7b6dff 55%,#5dcdf5);color:#0a0c14;border:0;box-shadow:0 6px 24px #8171ff35}button.primary:hover,.upload-label.primary:hover{filter:brightness(1.08)}button.active{border-color:#8b7cff80;background:#8b7cff20;color:#d8d3ff}input[type=file]{display:none}.spacer{flex:1}.light-control{display:flex;align-items:center;gap:12px;padding:0 12px;min-width:205px}.light-control span{color:#aeb5c7;font-size:11px;white-space:nowrap}.light-control b{color:#fff;font-variant-numeric:tabular-nums;margin-left:4px}input[type=range]{width:105px;accent-color:#a99cff;cursor:pointer}.hint{position:absolute;z-index:2;bottom:18px;left:50%;transform:translateX(-50%);color:#aeb5c5;background:rgba(8,10,16,.60);border:1px solid #ffffff12;padding:8px 13px;border-radius:999px;font-size:11px;white-space:nowrap;backdrop-filter:blur(10px);pointer-events:none}.error{position:absolute;z-index:4;top:78px;left:20px;right:20px;color:#ffdfe4;background:#3b1722ed;border:1px solid #f06d8a55;border-radius:14px;padding:12px 15px;display:none;box-shadow:0 10px 35px #0005}
+    @media(max-width:650px){.topbar{height:58px;padding:0 13px}.logo{width:34px;height:34px;border-radius:11px}.top-status{font-size:10px}.file-pill{top:12px;left:12px;padding:8px 11px}.controls{flex-wrap:wrap;gap:7px;padding:9px 10px max(9px,env(safe-area-inset-bottom))}button,.upload-label{flex:1;min-width:0;min-height:42px;padding:0 9px;font-size:11px}.light-control{order:4;width:100%;min-width:0;padding:5px 7px}.light-control span{min-width:100px}input[type=range]{flex:1;width:auto}.spacer{display:none}.hint{bottom:12px;font-size:10px;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}.welcome{padding:20px}.welcome .cube{width:70px;height:70px;font-size:36px;margin-bottom:18px}.welcome p{font-size:13px}}
+    @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">3D</div>
+    <div class="brand">KRUTILKA <small>3D MODEL STUDIO</small></div>
+    <div class="top-status"><span class="status-light"></span> Локальный просмотрщик</div>
+  </header>
+  <main id="stage">
+    <div class="file-pill"><span class="dot"></span><div><span class="file-label">Текущая модель</span><span id="filename">Модель не загружена</span></div></div>
+    <div class="welcome" id="welcome">
+      <div class="cube">◇</div>
+      <h1>Твоя модель.<br>Твой ракурс.</h1>
+      <p>Загрузи 3D-модель и изучай её со всех сторон. Перетаскивай, вращай, приближай.</p>
+      <label class="upload-label primary" for="modelFile">＋ Выбрать 3D-модель</label>
+    </div>
+    <div class="error" id="error"></div>
+    <div class="hint">МЫШЬ / ПАЛЕЦ — вращение  ·  КОЛЕСО / ЩИПОК — масштаб</div>
+  </main>
+  <footer class="controls">
+    <label class="upload-label primary" for="modelFile">＋ Импорт модели</label>
+    <input id="modelFile" type="file" accept=".glb,.gltf,.bin,.png,.jpg,.jpeg,.webp">
+    <button id="autoBtn" class="active" type="button">⟳ Автовращение</button>
+    <button id="centerBtn" type="button">⌖ В центр</button>
+    <div class="spacer"></div>
+    <div class="light-control"><span>☀ Свет <b id="lightValue">100%</b></span><input id="lightRange" type="range" min="20" max="180" value="100" aria-label="Яркость света"></div>
+  </footer>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
+    import { RoomEnvironment } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js';
+
+    const stage = document.querySelector('#stage');
+    const filenameEl = document.querySelector('#filename');
+    const welcome = document.querySelector('#welcome');
+    const errorEl = document.querySelector('#error');
+    const autoBtn = document.querySelector('#autoBtn');
+    const lightRange = document.querySelector('#lightRange');
+    const lightValue = document.querySelector('#lightValue');
+    const fileInput = document.querySelector('#modelFile');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color('#111522');
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 1000);
+    camera.position.set(3, 2.2, 4.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmremGenerator.dispose();
+    stage.prepend(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 1.5;
+    controls.minDistance = 0.05;
+    controls.maxDistance = 500;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x5d6477, 1.8));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
+    keyLight.position.set(4, 6, 5); scene.add(keyLight);
+    const fillLight = new THREE.DirectionalLight(0x8bbcff, 1.2);
+    fillLight.position.set(-4, 2, -3); scene.add(fillLight);
+    const rimLight = new THREE.DirectionalLight(0xffd7b0, 1.6);
+    rimLight.position.set(0, 3, -5); scene.add(rimLight);
+
+    const grid = new THREE.GridHelper(10, 24, 0x57518a, 0x33384d);
+    grid.position.y = -1.5;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.22;
+    scene.add(grid);
+
+    let currentModel = null;
+    let currentBlobUrls = [];
+    let lightBase = [1.8, 3.0, 1.2, 1.6];
+
+    function resize() {
+      const w = stage.clientWidth, h = stage.clientHeight;
+      camera.aspect = Math.max(w / Math.max(h, 1), 0.1);
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+    }
+    new ResizeObserver(resize).observe(stage);
+    resize();
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+    }
+    function clearError() { errorEl.style.display = 'none'; errorEl.textContent = ''; }
+
+    function centerModel(object) {
+      const box = new THREE.Box3().setFromObject(object);
+      if (box.isEmpty()) return;
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      object.position.sub(center);
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const fov = camera.fov * Math.PI / 180;
+      let distance = Math.abs(maxDim / (2 * Math.tan(fov / 2))) * 1.55;
+      distance = Math.max(distance, maxDim * 1.25, 0.5);
+      camera.position.set(distance * 0.72, distance * 0.42, distance * 1.05);
+      camera.near = Math.max(maxDim / 1000, 0.001);
+      camera.far = Math.max(maxDim * 100, 100);
+      camera.updateProjectionMatrix();
+      controls.target.set(0, 0, 0);
+      controls.minDistance = maxDim * 0.12;
+      controls.maxDistance = maxDim * 20;
+      controls.update();
+      grid.position.y = -size.y * 0.52;
+      grid.scale.setScalar(Math.max(maxDim / 10, 0.01));
+    }
+
+    function disposeModel() {
+      if (!currentModel) return;
+      scene.remove(currentModel);
+      currentModel.traverse(obj => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) {
+          const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+          materials.forEach(m => {
+            for (const value of Object.values(m)) if (value && value.isTexture) value.dispose();
+            m.dispose();
+          });
+        }
+      });
+      currentModel = null;
+      currentBlobUrls.forEach(URL.revokeObjectURL);
+      currentBlobUrls = [];
+    }
+
+    async function loadModel(file) {
+      clearError();
+      if (!file) return;
+      const ext = file.name.toLowerCase().split('.').pop();
+      if (!['glb','gltf'].includes(ext)) {
+        showError('Выбери основной файл .glb или .gltf. Для .gltf также нужны связанные файлы текстур и .bin.');
+        return;
+      }
+      disposeModel();
+      filenameEl.textContent = file.name;
+      welcome.style.display = 'none';
+
+      try {
+        const manager = new THREE.LoadingManager();
+        const loader = new GLTFLoader(manager);
+        let gltf;
+        if (ext === 'glb') {
+          const url = URL.createObjectURL(file);
+          currentBlobUrls.push(url);
+          gltf = await loader.loadAsync(url);
+        } else {
+          // For standalone .gltf, make companion files available by relative filename.
+          const files = Array.from(fileInput.files || []);
+          const fileMap = new Map(files.map(f => [f.name, f]));
+          const mainUrl = URL.createObjectURL(file);
+          currentBlobUrls.push(mainUrl);
+          manager.setURLModifier(url => {
+            const clean = decodeURIComponent(url.split('/').pop().split('?')[0]);
+            const companion = fileMap.get(clean);
+            if (!companion) return url;
+            const blobUrl = URL.createObjectURL(companion);
+            currentBlobUrls.push(blobUrl);
+            return blobUrl;
+          });
+          gltf = await loader.loadAsync(mainUrl);
+        }
+        currentModel = gltf.scene;
+        scene.add(currentModel);
+        centerModel(currentModel);
+      } catch (err) {
+        console.error('Ошибка загрузки 3D-модели:', err);
+        welcome.style.display = 'flex';
+        const detail = (err && (err.message || err.toString())) ? (err.message || err.toString()) : 'неизвестная ошибка';
+        showError('Не удалось загрузить модель: ' + detail + '. Открой F12 → Console для подробностей. Если ошибка связана с сетью/CDN, проверь интернет; если с форматом, попробуй экспортировать модель в .glb.');
+      }
+    }
+
+    fileInput.addEventListener('change', e => { loadModel(e.target.files?.[0]); e.target.value = ''; });
+    autoBtn.addEventListener('click', () => {
+      controls.autoRotate = !controls.autoRotate;
+      autoBtn.classList.toggle('active', controls.autoRotate);
+      autoBtn.textContent = controls.autoRotate ? '⟳ Автовращение' : '⏸ Автоповорот';
+    });
+    document.querySelector('#centerBtn').addEventListener('click', () => {
+      if (currentModel) centerModel(currentModel);
+      else { camera.position.set(3, 2.2, 4.2); controls.target.set(0,0,0); controls.update(); }
+    });
+    lightRange.addEventListener('input', () => {
+      const factor = Number(lightRange.value) / 100;
+      scene.traverse(obj => {
+        if (obj.isHemisphereLight) obj.intensity = lightBase[0] * factor;
+        if (obj.isDirectionalLight) {
+          if (obj === keyLight) obj.intensity = lightBase[1] * factor;
+          if (obj === fillLight) obj.intensity = lightBase[2] * factor;
+          if (obj === rimLight) obj.intensity = lightBase[3] * factor;
+        }
+      });
+      lightValue.textContent = `${lightRange.value}%`;
+    });
+
+    // Drag a GLB directly into the viewer on desktop.
+    stage.addEventListener('dragover', e => { e.preventDefault(); });
+    stage.addEventListener('drop', e => {
+      e.preventDefault();
+      const file = e.dataTransfer?.files?.[0];
+      if (file) loadModel(file);
+    });
+
+    // If opened from a channel post with ?model=<id>, load that published model.
+    async function loadPublishedModel() {
+      const id = new URLSearchParams(window.location.search).get('model');
+      if (!id) return;
+      welcome.style.display = 'none';
+      filenameEl.textContent = 'Загрузка опубликованной модели…';
+      try {
+        const response = await fetch(`/.netlify/functions/model?id=${encodeURIComponent(id)}`);
+        if (!response.ok) throw new Error(response.status === 404 ? 'Модель не найдена.' : `HTTP ${response.status}`);
+        const blob = await response.blob();
+        await loadModel(new File([blob], `model-${id}.glb`, { type: 'model/gltf-binary' }));
+      } catch (err) {
+        welcome.style.display = 'flex';
+        showError('Не удалось открыть опубликованную модель: ' + err.message);
+      }
+    }
+    loadPublishedModel();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
