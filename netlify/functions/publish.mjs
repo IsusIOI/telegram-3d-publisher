@@ -1,4 +1,3 @@
-
 import { getStore } from '@netlify/blobs';
 
 const json = (status, body) =>
@@ -23,10 +22,16 @@ export default async (req) => {
     const channel = process.env.TELEGRAM_CHANNEL || '@isusgame';
     const botUsername = (process.env.TELEGRAM_BOT_USERNAME || '').replace(/^@/, '');
 
-    if (!adminKey || !botToken || !botUsername) {
-      return json(500, {
-        error: 'На Netlify должны быть заданы ADMIN_KEY, TELEGRAM_BOT_TOKEN и TELEGRAM_BOT_USERNAME.'
-      });
+    const missing = [
+      ['ADMIN_KEY', adminKey],
+      ['TELEGRAM_BOT_TOKEN', botToken],
+      ['TELEGRAM_BOT_USERNAME', botUsername]
+    ]
+      .filter(([, v]) => !v)
+      .map(([k]) => k);
+
+    if (missing.length) {
+      return json(500, { error: 'Не заданы переменные: ' + missing.join(', ') });
     }
 
     let data;
