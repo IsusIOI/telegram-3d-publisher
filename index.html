@@ -243,20 +243,36 @@
       if (file) loadModel(file);
     });
 
-    // If opened from a channel post with ?model=<id>, load that published model.
+    // Открытие по ссылке: ?model=<id> (из хранилища) или ?file=<имя.glb> (из папки models/)
     async function loadPublishedModel() {
-      const id = new URLSearchParams(window.location.search).get('model');
-      if (!id) return;
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('model');
+      const fileName = params.get('file');
+      if (!id && !fileName) return;
+
+      let url, label;
+      if (fileName) {
+        if (!/^[\w.-]+\.glb$/i.test(fileName)) {
+          showError('Некорректное имя файла.');
+          return;
+        }
+        url = `/models/${encodeURIComponent(fileName)}`;
+        label = fileName;
+      } else {
+        url = `/.netlify/functions/model?id=${encodeURIComponent(id)}`;
+        label = `model-${id}.glb`;
+      }
+
       welcome.style.display = 'none';
-      filenameEl.textContent = 'Загрузка опубликованной модели…';
+      filenameEl.textContent = 'Загрузка модели…';
       try {
-        const response = await fetch(`/.netlify/functions/model?id=${encodeURIComponent(id)}`);
+        const response = await fetch(url);
         if (!response.ok) throw new Error(response.status === 404 ? 'Модель не найдена.' : `HTTP ${response.status}`);
         const blob = await response.blob();
-        await loadModel(new File([blob], `model-${id}.glb`, { type: 'model/gltf-binary' }));
+        await loadModel(new File([blob], label, { type: 'model/gltf-binary' }));
       } catch (err) {
         welcome.style.display = 'flex';
-        showError('Не удалось открыть опубликованную модель: ' + err.message);
+        showError('Не удалось открыть модель: ' + err.message);
       }
     }
     loadPublishedModel();
