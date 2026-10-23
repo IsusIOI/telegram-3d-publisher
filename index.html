@@ -58,6 +58,11 @@
     import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
     import { RoomEnvironment } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js';
 
+    // Настройки репозитория, из которого раздаются файлы моделей
+    const GH_USER = 'IsusIOI';
+    const GH_REPO = 'telegram-3d-publisher';
+    const GH_BRANCH = 'main';
+
     const stage = document.querySelector('#stage');
     const filenameEl = document.querySelector('#filename');
     const welcome = document.querySelector('#welcome');
@@ -243,28 +248,41 @@
       if (file) loadModel(file);
     });
 
-    // Скачивание с таймаутом и повторами (на случай обрывов соединения)
-    async function fetchWithRetry(url, tries = 4) {
+    // Проверка, что скачан именно .glb (а не HTML-страница вместо файла)
+    async function assertGlb(blob) {
+      if (blob.size < 20) throw new Error('пустой файл');
+      const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+      if (String.fromCharCode(...head) !== 'glTF') throw new Error('это не .glb файл');
+    }
+
+    // Запрашивает все адреса параллельно, берёт тот, что ответил первым.
+    // При неудаче повторяет несколько кругов.
+    async function fetchFirst(urls, { rounds = 3, timeout = 25000, checkGlb = true } = {}) {
       let lastErr;
-      for (let i = 1; i <= tries; i++) {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 20000);
+      for (let round = 1; round <= rounds; round++) {
+        filenameEl.textContent = `Загрузка модели… (попытка ${round}/${rounds})`;
+        const ctrls = urls.map(() => new AbortController());
+        const timer = setTimeout(() => ctrls.forEach(c => c.abort()), timeout);
         try {
-          filenameEl.textContent = `Загрузка модели… (попытка ${i}/${tries})`;
-          const response = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
-          if (response.status === 404) throw Object.assign(new Error('Модель не найдена.'), { fatal: true });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const blob = await response.blob();
+          const blob = await Promise.any(urls.map(async (u, i) => {
+            const resp = await fetch(u, { signal: ctrls[i].signal, cache: 'no-store' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const b = await resp.blob();
+            if (checkGlb) await assertGlb(b);
+            return b;
+          }));
           clearTimeout(timer);
+          ctrls.forEach(c => c.abort());
           return blob;
         } catch (err) {
           clearTimeout(timer);
-          if (err.fatal) throw err;
-          lastErr = err.name === 'AbortError' ? new Error('превышено время ожидания') : err;
-          await new Promise(r => setTimeout(r, 800 * i));
+          ctrls.forEach(c => c.abort());
+          lastErr = err;
+          await new Promise(r => setTimeout(r, 600 * round));
         }
       }
-      throw lastErr || new Error('нет соединения');
+      const reasons = lastErr && lastErr.errors ? lastErr.errors.map(e => e.message).join(', ') : (lastErr && lastErr.message) || 'нет соединения';
+      throw new Error(reasons);
     }
 
     // Открытие по ссылке: ?model=<id> (из хранилища) или ?file=<имя.glb> (из папки models/)
@@ -274,22 +292,27 @@
       const fileName = params.get('file');
       if (!id && !fileName) return;
 
-      let url, label;
+      let urls, label;
       if (fileName) {
         if (!/^[\w.-]+\.glb$/i.test(fileName)) {
           showError('Некорректное имя файла.');
           return;
         }
-        url = `/models/${encodeURIComponent(fileName)}`;
+        const name = encodeURIComponent(fileName);
+        urls = [
+          `https://cdn.jsdelivr.net/gh/${GH_USER}/${GH_REPO}@${GH_BRANCH}/models/${name}`,
+          `https://raw.githubusercontent.com/${GH_USER}/${GH_REPO}/${GH_BRANCH}/models/${name}`,
+          `models/${name}`
+        ];
         label = fileName;
       } else {
-        url = `/.netlify/functions/model?id=${encodeURIComponent(id)}`;
+        urls = [`/.netlify/functions/model?id=${encodeURIComponent(id)}`];
         label = `model-${id}.glb`;
       }
 
       welcome.style.display = 'none';
       try {
-        const blob = await fetchWithRetry(url);
+        const blob = await fetchFirst(urls);
         await loadModel(new File([blob], label, { type: 'model/gltf-binary' }));
       } catch (err) {
         welcome.style.display = 'flex';
