@@ -44,6 +44,7 @@
     <div class="light-control"><span>☀ Свет <b id="lightValue">100%</b></span><input id="lightRange" type="range" min="20" max="180" value="100" aria-label="Яркость света"></div>
   </footer>
 
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script type="importmap">
     {
       "imports": {
@@ -288,8 +289,16 @@
     // Открытие по ссылке: ?model=<id> (из хранилища) или ?file=<имя.glb> (из папки models/)
     async function loadPublishedModel() {
       const params = new URLSearchParams(window.location.search);
-      const id = params.get('model');
-      const fileName = params.get('file');
+      const tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+const hashParams = new URLSearchParams(window.location.hash.slice(1));
+const startParam = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param)
+  || params.get('tgWebAppStartParam')
+  || hashParams.get('tgWebAppStartParam')
+  || '';
+const id = params.get('model');
+const fileName = params.get('file')
+  || (startParam ? (startParam.endsWith('.glb') ? startParam : startParam + '.glb') : null);
       if (!id && !fileName) return;
 
       let urls, label;
