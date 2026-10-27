@@ -1,5 +1,7 @@
 const OK = () => new Response('ok');
 
+const DISCUSS_URL = 'https://t.me/+fgQbtQex8aY1ODIy';
+
 const HELP =
   'Команда для публикации:\n\n' +
   '/post имя Название | Описание\n\n' +
@@ -84,7 +86,12 @@ export default async (req) => {
   }
 
   const link = `https://t.me/${botUsername}?startapp=${name}`;
-  const keyboard = { inline_keyboard: [[{ text: '🔄 Покрутить в 3D', url: link }]] };
+  const keyboard = {
+    inline_keyboard: [[
+      { text: '🔄 Покрутить в 3D', url: link },
+      { text: '💬 Обсудить', url: DISCUSS_URL }
+    ]]
+  };
   const caption = `🧊 ${title}` + (description ? `\n\n${description}` : '');
 
   const photo = msg.photo && msg.photo.length ? msg.photo[msg.photo.length - 1].file_id : null;
